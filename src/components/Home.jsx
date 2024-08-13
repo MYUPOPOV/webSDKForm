@@ -2,8 +2,8 @@ import {useEffect} from "react";
 
 function Home() {
   useEffect(() => {
-    const webSdkPaymentForm = new window.PaymentForm({
-      mdOrder: "7d6485a1-6728-7de1-861c-7e5f07d96e3b",
+    let webSdkPaymentForm = new window.PaymentForm({
+      mdOrder: "18708e18-b606-7baa-9061-ead507ab809b",
       // Name of the className that will be set for containers with frames
       containerClassName: 'field-container',
       onFormValidate: (isValid) => {
@@ -90,8 +90,39 @@ function Home() {
 
     webSdkPaymentForm
         .init()
-        .then(() => {
-          // initSuccessfull();
+        .then(({orderSession}) => {
+                      // orderSession contains all information about order (it includes info about bindings)
+                      console.info('orderSession', orderSession);
+
+                      // Show select binding element
+                      document.querySelector('#select-binding-container').style.display = orderSession.bindings.length
+                        ? ''
+                        : 'none';
+          
+                      // Show save card checkbox
+                      document.querySelector('#save-card-container').style.display = orderSession.bindingEnabled ? '' : 'none';
+          
+                      // Fill select with bindings
+                      orderSession.bindings.forEach((binding) => {
+                        document.querySelector('#select-binding').options.add(new Option(binding.pan, binding.id));
+                      });
+          
+                      // Handle select binding/new-card
+                      document.querySelector('#select-binding').addEventListener('change', function () {
+                        const bindingId = this.value;
+                        if (bindingId !== 'new_card') {
+                          webSdkPaymentForm.selectBinding(bindingId);
+          
+                          // hide save card checkbox
+                          document.querySelector('#save-card-container').style.display = 'none';
+                        } else {
+                          // selectBinding with null means switch to new-card
+                          webSdkPaymentForm.selectBinding(null);
+          
+                          // show save card checkbox
+                          document.querySelector('#save-card-container').style.display = '';
+                        }
+                      });
         })
         .catch(() => {
           // initError();
@@ -132,10 +163,16 @@ function Home() {
           </div>
           <div className="websdk-form">
             <div className="card-body">
+              <div className="col-12" id="select-binding-container" style={{display: "none"}}>
+                <select className="form-select" id="select-binding" aria-label="Default select example">
+                  <option value="new_card">Pay by new card</option>
+                </select>
+              </div>
               <div className="col-12 input-form">
                 <label htmlFor="pan" className="form-label">
                   Card number
                 </label>
+              
               <div id="pan" className="form-control"></div>
               </div>
               <div className="col-6 col-expiry input-form">
@@ -150,6 +187,10 @@ function Home() {
                 </label>
                 <div id="cvc" className="form-control"></div>
               </div>
+              <label className="col-12" id="save-card-container">
+                <input className="form-check-input me-1" type="checkbox" value="" id="save-card" />
+                Save card
+              </label>
             </div>
             <div className="pay-control">
               <button className="btn btn-primary btn-lg" type="submit" id="pay">
